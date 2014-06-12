@@ -2,6 +2,7 @@
 #include <QPen>
 #include <QWidget>
 #include <QHBoxLayout>
+#include <QSlider>
 #ifdef _WIN32
 #include <qwt_plot.h>
 #include <qwt_plot_curve.h>
@@ -12,7 +13,8 @@
 #include <vector>
 #include <cstdlib>
 #include "bspline.hpp"
-
+#include "CsvHandler.hpp"
+#include "CsvHandler.cpp" // HACK-O-RAMA
 // A simple Qt application containing a single QwtPlot to plot a curve
 
 std::vector<float> stdVectorToFloat(const std::vector<double>& in) {
@@ -75,7 +77,7 @@ int main1(int argc, char** argv) {
 }
 
 // Simple least squares spline function approximation demo.
-int main(int argc, char** argv) {
+int main2(int argc, char** argv) {
     QApplication app(argc, argv);
     
     QWidget* mainWidget = new QWidget;
@@ -95,7 +97,7 @@ int main(int argc, char** argv) {
         dataYs.push_back(std::rand() % 100);
     }
     
-    // Render the spline approximation.
+    // Create uniform regular knot vector
     std::vector<float> knots = bspline_storve::uniformRegularKnotVector(numControlPoints,
                                                                         degree,
                                                                         dataXs[0],
@@ -106,8 +108,7 @@ int main(int argc, char** argv) {
     // by degree and knot vector.
     auto controlPoints = bspline_storve::leastSquaresFit(dataXs, dataYs, knots, degree);
 
-    std::cout << "BAJS\n";
-
+    // Render the spline approximation.
     std::vector<float> xs;
     std::vector<float> ys;
     bspline_storve::linspace(0.0, 1.0, 1000, xs);
@@ -143,3 +144,79 @@ int main(int argc, char** argv) {
     
     return app.exec();
 }
+
+// Simple least squares spline function approximation to CSV time signal.
+int main(int argc, char** argv) {
+    QApplication app(argc, argv);
+    
+    QWidget* mainWidget = new QWidget;
+    mainWidget->resize(1024, 768);
+    QHBoxLayout* hlayout = new QHBoxLayout;
+    mainWidget->setLayout(hlayout);
+
+    QSlider *slider = new QSlider;
+    hlayout->addWidget(slider);
+    
+    int degree = 3;
+    int numControlPoints = 20;
+    
+    // Generate some random points
+    std::vector<float> dataXs;
+    std::vector<float> dataYs;
+    loadTimeSignal("velocity_buffer_septal.csv", dataXs, dataYs);
+    int numSamples = dataXs.size();
+
+    slider->setMinimum(2);
+    slider->setMaximum(numSamples-1);
+
+    // Create uniform regular knot vector
+    std::vector<float> knots = bspline_storve::uniformRegularKnotVector(numControlPoints,
+                                                                        degree,
+                                                                        dataXs[0],
+                                                                        dataXs[numSamples-1],
+                                                                        true);
+                                                                        
+    // Compute least squares spline approximation in spline space defined
+    // by degree and knot vector.
+    auto controlPoints = bspline_storve::leastSquaresFit(dataXs, dataYs, knots, degree);
+
+    // Render the spline approximation.
+    std::vector<float> xs;
+    std::vector<float> ys;
+    bspline_storve::linspace(dataXs[0], dataXs[numSamples-1], 1000, xs);
+    ys = bspline_storve::renderSpline(degree, knots, controlPoints, xs);
+
+    QwtPlot* plot = new QwtPlot;
+    hlayout->addWidget(plot);
+    QwtPlotCurve* curve1 = new QwtPlotCurve("Curve 1");
+    curve1->setPen(QPen(QColor(255, 0, 0)));
+    auto xsDouble = stdVectorToDouble(xs);
+    auto ysDouble = stdVectorToDouble(ys);
+    curve1->setSamples(xsDouble.data(), ysDouble.data(), xsDouble.size());
+    curve1->setRenderHint(QwtPlotItem::RenderAntialiased);
+    curve1->attach(plot);
+    
+    QwtPlotCurve* curve2 = new QwtPlotCurve("Control Polygon");
+    curve2->setPen(QPen(QColor(0, 0, 0)));
+    std::vector<float> cpTimes = bspline_storve::controlPolygon(degree, knots);
+    auto cpTimesDouble = stdVectorToDouble(cpTimes);
+    auto cpValuesDouble = stdVectorToDouble(controlPoints);
+    curve2->setSamples(cpTimesDouble.data(), cpValuesDouble.data(), cpTimesDouble.size());
+    curve2->setRenderHint(QwtPlotItem::RenderAntialiased);
+    curve2->attach(plot);
+    
+    QwtPlotCurve* curve3 = new QwtPlotCurve("Raw data");
+    curve3->setPen(QPen(QColor(0,255,255)));
+    auto dataXsDouble = stdVectorToDouble(dataXs);
+    auto dataYsDouble = stdVectorToDouble(dataYs);
+    curve3->setSamples(dataXsDouble.data(), dataYsDouble.data(), dataXsDouble.size());
+    curve3->setRenderHint(QwtPlotItem::RenderAntialiased);
+    curve3->attach(plot);
+    
+    mainWidget->show();
+    std::cout << "Qt version: ";
+    std::cout << QT_VERSION_STR << std::endl;
+    
+    return app.exec();
+}
+
