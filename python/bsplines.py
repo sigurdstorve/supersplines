@@ -138,7 +138,7 @@ def uniform_regular_knot_vector(n, p, t0=0.0, t1=1.0):
     if n < p+1:
         raise RuntimeError("Too small n for a uniform regular knot vector")
 
-    # n+1 copies of t0 left and n+1 copies of t1 right
+    # p+1 copies of t0 left and p+1 copies of t1 right
     # but one of each in linspace
     return [t0]*p + list(np.linspace(t0, t1, n+1-p)) + [t1]*p
 

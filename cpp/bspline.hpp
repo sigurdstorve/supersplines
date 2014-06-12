@@ -6,6 +6,23 @@
 
 namespace bspline_storve {
 
+// Simple implementation of functionality like NumPy's linspace()
+
+void linspace(float left, float right, int n, std::vector<float>& res) {
+    if (n < 0) {
+        return;
+    }
+    res.resize(n);
+    if (n == 0) {
+        return;
+    } else if (n == 1) {
+        res[0] = left;
+    } else {
+        for (int i = 0; i < n; i++) {
+            res[i] = left+i*(right-left)/(n-1);
+        }
+    }
+}
 
 // Test if floating point number is zero.
 template <typename T>
@@ -158,18 +175,40 @@ float B3(int j, float x, const std::vector<float>& knots) {
 Create a p+1-regular uniform knot vector for
 a given number of control points
 Throws if n is too small
+endHack: Make the last knot bigger than the one before it, which has the
+effect of making it non-zero in last knot value.
 */
-std::vector<float> uniformRegularKnotVector(int n, int p, float t0=0.0, float t1=1.0) {
+std::vector<float> uniformRegularKnotVector(int numPoints,
+                                            int degree,
+                                            float tStart=0.0f,
+                                            float tEnd=1.0f,
+                                            bool endHack=false) {
 
-    // The minimum length of a p+1-regular knot vector
-    // is 2*(p+1)
-    if (n < p+1) {
+    // The minimum length of a degree+1-regular knot vector is 2*(degree+1)
+    if (numPoints < degree+1) {
         throw std::runtime_error("Too small n for a uniform regular knot vector");
     }
-    // n+1 copies of t0 left and n+1 copies of t1 right
+    
+    std::vector<float> knots;
+    // degree+1 copies of tStart left and degree+1 copies of tEnd right
     // but one of each in linspace
-    //return [t0]*p + list(np.linspace(t0, t1, n+1-p)) + [t1]*p
-    throw std::runtime_error("");
+    for (int i = 0; i < degree; i++) {
+        knots.push_back(tStart);
+    }
+    std::vector<float> temp;
+    linspace(tStart, tEnd, numPoints+1-degree, temp);
+    for (float t : temp) {
+        knots.push_back(t);
+    }
+    for (int i = 0; i < degree; i++) {
+        knots.push_back(tEnd);
+    }
+    
+    if (endHack) {
+        int numKnots = knots.size();
+        knots[numKnots-1] += 1.0f;
+    }
+    return knots;
 }
 
 /*

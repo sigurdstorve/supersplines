@@ -61,4 +61,5 @@ if (BSPLINE_BUILD_QT)
     target_link_libraries(qtdemo ${QT_LIBRARIES})    
     target_link_libraries(qtdemo ${QWT_LIBRARIES})
     target_link_libraries(qtdemo ${OPENGL_LIBRARIES})
+    
 endif()
