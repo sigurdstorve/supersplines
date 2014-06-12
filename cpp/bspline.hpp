@@ -4,6 +4,9 @@
 #include <vector>
 #include <stdexcept>
 
+// Workaround for MinGW bug
+#pragma GCC optimize ("-fno-ipa-cp-clone")
+
 namespace bspline_storve {
 
 // Simple implementation of functionality like NumPy's linspace()
@@ -286,10 +289,13 @@ std::vector<float> leastSquaresFit(const std::vector<float>& xs,
     }
     
     // Compute least-squares coefficients
-    Eigen::VectorXf res = (A.transpose()*A).ldlt().solve(A.transpose()*b);
-    
-    std::cout << res << std::endl;
-    
+    Eigen::VectorXf temp = (A.transpose()*A).ldlt().solve(A.transpose()*b);
+    assert(temp.size() == numApproxPoints);
+    std::vector<float> res(numApproxPoints);
+    for (int i = 0; i < numApproxPoints; i++) {
+        res[i] = temp(i);
+    }
+    return res;
 }
 
 }   // end namespace bspline_storve

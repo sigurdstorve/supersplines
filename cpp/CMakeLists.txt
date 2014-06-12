@@ -4,7 +4,7 @@ project(bsplines)
 option(BSPLINE_BUILD_QT "Build the Qt application" OFF)
 option(BSPLINE_BUILD_UNIT_TESTS "Build test using Boost.Test" OFF)
 
-include_directories(d:/mingw_libs)
+include_directories(d:/mingw_libs) # Temp. HACK: TODO: FIX
 
 add_definitions(-std=c++11)
 add_executable(bspline_demo bspline.hpp demo.cpp)
