@@ -323,12 +323,27 @@ std::vector<float> computeDerivativeCoeffs(int degree,
         float value;
         if (i == 0) {
             // left coundary condition
-            derCoeffs[i] = degree*coeffs[0]/(knots[i+degree]-knots[i]);
+            auto denominator = knots[i+degree]-knots[i];
+            if (_floatIsZero(denominator)) {
+                derCoeffs[i] = 0.0f;
+            } else {
+                derCoeffs[i] = degree*coeffs[0]/denominator;
+            }
         } else if (i == n) {
             // right coundary condition
-            derCoeffs[i] = -degree*coeffs[i-1]/(knots[i+degree]-knots[i]);
+            auto denominator = knots[i+degree]-knots[i];
+            if (_floatIsZero(denominator)) {
+                derCoeffs[i] = 0.0f;
+            } else {
+                derCoeffs[i] = -degree*coeffs[i-1]/denominator;
+            }
         } else {
-            derCoeffs[i] = degree*(coeffs[i]-coeffs[i-1])/(knots[i+degree]-knots[i]); 
+            auto denominator = knots[i+degree]-knots[i];
+            if (_floatIsZero(denominator)) {
+                derCoeffs[i] = 0.0f;
+            } else {
+                derCoeffs[i] = degree*(coeffs[i]-coeffs[i-1])/denominator; 
+            }
         }
     }
     return derCoeffs;
