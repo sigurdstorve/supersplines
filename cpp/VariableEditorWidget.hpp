@@ -34,7 +34,7 @@ public:
         
         m_spinBox = new QDoubleSpinBox;
         m_spinBox->setRange(minValue, maxValue);
-        m_spinBox->setSingleStep(1);
+        m_spinBox->setSingleStep(0.01f*(maxValue-minValue));
         connect(m_spinBox, SIGNAL(valueChanged(double)), this, SLOT(valueChanged(double)));
         m_varPtr = varPtr;
         layout->addWidget(m_spinBox);
