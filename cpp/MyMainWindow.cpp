@@ -17,6 +17,7 @@
 #include "bspline.hpp"
 #include "CsvHandler.hpp"
 #include "CsvHandler.cpp" // HACK-O-RAMA
+#include "QTweakWindow.hpp"
 
 #include "MyMainWindow.hpp"
 
@@ -37,6 +38,20 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     QHBoxLayout* hlayout = new QHBoxLayout;
     mainWidget->setLayout(hlayout);
 
+    m_degree = 2;
+    m_numControlPoints = 20;
+    m_showControlPolygon = true;
+
+    QTweakWindow* tweakWin = new QTweakWindow;
+    float sigma = 0.0;
+    tweakWin->registerVariable("sigma", &sigma, 0.0, 10.0); 
+    tweakWin->registerVariable("m_degree", &m_degree, 0, 10);
+    tweakWin->registerVariable("m_numControlPoints", &m_numControlPoints, 10, 100);
+    tweakWin->registerVariable("m_showControlPolygon", &m_showControlPolygon);
+    hlayout->addWidget(tweakWin);
+    
+
+
     m_slider = new QSlider;
     m_slider->setValue(m_numControlPoints);
     connect(m_slider, SIGNAL(valueChanged(int)),
@@ -46,10 +61,6 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     m_button = new QPushButton("Control polygon on/off");
     hlayout->addWidget(m_button);
     connect(m_button, SIGNAL(released()), this, SLOT(toggleControlPolygon()));
-    
-    m_degree = 3;
-    m_numControlPoints = 20;
-    m_showControlPolygon = true;
 
     // Prepare plotting
     m_plot = new QwtPlot;
@@ -70,6 +81,8 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     loadCsvData(csvFile);
     updateSplineApprox();
     mainWidget->show();
+
+    // Create the separate tweaking window
 }
 void MyMainWindow::loadCsvData(const std::string& csvFile) {
     loadTimeSignal(csvFile, m_dataXs, m_dataYs);
