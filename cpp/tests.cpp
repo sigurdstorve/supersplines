@@ -244,3 +244,70 @@ BOOST_AUTO_TEST_CASE(TestSplineDerivativeCoeffsComputationDegree1) {
     BOOST_CHECK_CLOSE(derCoeffs[3], 0.0, 0.0001);
 
 }
+
+// Simple test of Böhm's method
+BOOST_AUTO_TEST_CASE(TestBohmsMethodSimple) {
+    int degree;
+    std::vector<float> knots, coeffs;
+    std::vector<float> knotsOut, coeffsOut;
+
+    degree = 0;
+    knots = {1.0f, 2.0f, 3.0f, 4.0f};
+    coeffs = {1.0f, -1.0, 2.0f};
+    float newKnot = 2.5f;
+    bspline_storve::bohmsMethod(degree, newKnot, knots, coeffs, knotsOut, coeffsOut);
+    BOOST_REQUIRE_CLOSE(knotsOut[0], 1.0f, 0.0001);
+    BOOST_REQUIRE_CLOSE(knotsOut[1], 2.0f, 0.0001);
+    BOOST_REQUIRE_CLOSE(knotsOut[2], 2.5f, 0.0001);
+    BOOST_REQUIRE_CLOSE(knotsOut[3], 3.0f, 0.0001);
+    BOOST_REQUIRE_CLOSE(knotsOut[4], 4.0f, 0.0001);
+    BOOST_REQUIRE_CLOSE(coeffsOut[0], 1.0f, 0.0001);
+    BOOST_REQUIRE_CLOSE(coeffsOut[1], -1.0f, 0.0001);
+    BOOST_REQUIRE_CLOSE(coeffsOut[2], -1.0f, 0.0001);
+    BOOST_REQUIRE_CLOSE(coeffsOut[3], 2.0f, 0.0001);
+}
+
+
+// Test that a spline is unchanged when using Böhm's metod for knot insertion
+BOOST_AUTO_TEST_CASE(TestBohmsMethodUnchagedSpline) {
+    float tStart = 1.0f;
+    float tEnd = 2.0f;
+    int numCs = 25;
+    int numCheckPoints = 50;
+
+    // One big vector of coefficients - used by all tests
+    std::vector<float> originalCoeffs;
+    for (int i = 0; i < numCs; i++) {
+        originalCoeffs.push_back(-10 + i*i);
+    }
+
+    // Generate the vector of parameter values where the original and
+    // refined should be compared
+    std::vector<float> checkParValues;
+    bspline_storve::linspace(tStart-1, tEnd+1, numCheckPoints, checkParValues);
+
+    for (int degree = 0; degree < 5; degree++) {
+        std::vector<float> originalKnots = bspline_storve::uniformRegularKnotVector(numCs, degree, tStart, tEnd);
+        std::vector<float> knots = originalKnots;
+        std::vector<float> coeffs = originalCoeffs;
+
+        // Add a knot and recompute coeffs
+        for (float newKnot = tStart; newKnot < tEnd; newKnot += 0.01) {
+            std::vector<float> knotsOut, coeffsOut;
+            bspline_storve::bohmsMethod(degree, newKnot, knots, coeffs, knotsOut, coeffsOut);
+            BOOST_CHECK_EQUAL(knotsOut.size(), knots.size()+1);
+            BOOST_CHECK_EQUAL(coeffsOut.size(), coeffs.size()+1);
+            // Continue refining the refined.
+            knots = knotsOut;
+            coeffs = coeffsOut;
+
+            // Evaluate and compare the original and cumulatively refined - they shall always be the same.
+            auto originalEval = bspline_storve::renderSpline(degree, originalKnots, originalCoeffs, checkParValues);
+            auto refinedEval = bspline_storve::renderSpline(degree, knotsOut, coeffsOut, checkParValues);
+            for (int i = 0; i < originalEval.size(); i++) {
+                BOOST_CHECK_CLOSE(originalEval[i], refinedEval[i], 0.0001);
+            }
+        }
+    }
+
+}

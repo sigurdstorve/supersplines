@@ -66,7 +66,7 @@ float bsplineBasis(int j, int p, float x, const std::vector<float>& knots) {
     Optional to supply a suggestion to try first.
     Throws on error.
 */
-int getMu(float x, std::vector<float>& knots, int mu=-1) {
+int getMu(float x, const std::vector<float>& knots, int mu=-1) {
     if (mu != -1 && (mu <= knots.size()-2) && (mu >= 0)) {
         if (x >= knots[mu] && x < knots[mu+1]) {
             return mu;
@@ -347,6 +347,46 @@ std::vector<float> computeDerivativeCoeffs(int degree,
         }
     }
     return derCoeffs;
+}
+
+// Compute the updated B-spline coefficients for a refined knot vector
+// obtained by adding one new knot to an existsing.
+// This is done using Böhm's method.
+// NOTE: The new knot z must be within the knot vector.
+void bohmsMethod(int degree,
+                 float z,
+                 const std::vector<float>& knotsIn,
+                 const std::vector<float>& coeffsIn,
+                 std::vector<float>& knotsOut,
+                 std::vector<float>& coeffsOut) {
+    int numKnots = knotsIn.size();
+    int numCoeffs = coeffsIn.size();
+    if (z < knotsIn[0] || z > knotsIn[numKnots-1]) throw std::runtime_error("New knot not within knot vector");
+    int mu = getMu(z, knotsIn);
+    
+    // Create the refined knot vector
+    knotsOut.resize(numKnots+1);
+    for (int i = 0; i <= mu; i++) {
+        knotsOut[i] = knotsIn[i];
+    }
+    knotsOut[mu+1] = z;
+    for (int i = mu+2; i < numKnots+1; i++) {
+        knotsOut[i] = knotsIn[i-1];
+    }
+
+    // Compute the coefficients relative to refined knot vector
+    coeffsOut.resize(numCoeffs+1);
+    for (int i = 0; i <= mu-degree; i++) {
+        coeffsOut[i] = coeffsIn[i];
+    }
+    for (int i = mu-degree+1; i <= mu; i++) {
+        coeffsOut[i] = coeffsIn[i]*_specialDiv(z-knotsIn[i], knotsIn[i+degree]-knotsIn[i])
+                        + coeffsIn[i-1]*_specialDiv(knotsIn[i+degree]-z, knotsIn[i+degree]-knotsIn[i]);
+    }
+    for (int i = mu+1; i < numCoeffs+1; i++) {
+        coeffsOut[i] = coeffsIn[i-1];
+    }
+
 }
 
 }   // end namespace bspline_storve
