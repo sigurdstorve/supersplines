@@ -20,11 +20,10 @@ void testBasisFunctions1() {
 
 void testBSplineMatrix() {
     int k = 3;
-    int p = 3;
     int mu = 3;
     std::vector<float> knots = {1,2,3,4,5,6,7,8,9,10,11,12};
     float x = 1.0f;
-    auto res = bsplineMatrix(k, p, mu, x, knots);
+    auto res = bsplineMatrix(k, mu, x, knots);
     std::cout << "Bk = " << res << std::endl;
 }
 

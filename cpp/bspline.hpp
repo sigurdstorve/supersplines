@@ -10,7 +10,6 @@
 namespace bspline_storve {
 
 // Simple implementation of functionality like NumPy's linspace()
-
 void linspace(float left, float right, int n, std::vector<float>& res) {
     if (n < 0) {
         return;
@@ -68,7 +67,7 @@ float bsplineBasis(int j, int p, float x, const std::vector<float>& knots) {
     Throws on error.
 */
 int getMu(float x, std::vector<float>& knots, int mu=-1) {
-    if (mu != -1) {
+    if (mu != -1 && (mu <= knots.size()-2) && (mu >= 0)) {
         if (x >= knots[mu] && x < knots[mu+1]) {
             return mu;
         }
@@ -81,7 +80,9 @@ int getMu(float x, std::vector<float>& knots, int mu=-1) {
     throw std::runtime_error("Illegal knot vector or x value");
 }
 
-Eigen::MatrixXf bsplineMatrix(int k, int p, int mu, float x, const std::vector<float>& knots) {
+// Compute B-spline matrix from theorem 2.18
+Eigen::MatrixXf bsplineMatrix(int k, int mu, float x, const std::vector<float>& knots) {
+    if (k <= 0) throw std::runtime_error("k must be greater than zero");
     Eigen::MatrixXf res(k, k+1);
     for (int row = 0; row <k; row++) {
         for (int col = 0; col < k+1; col++) {
@@ -93,7 +94,16 @@ Eigen::MatrixXf bsplineMatrix(int k, int p, int mu, float x, const std::vector<f
         res(row,row) = _specialDiv(knots[mu+(row+1)] - x, common_denom);
         res(row,row+1) = _specialDiv(x - knots[mu + (row+1) - k], common_denom);
     }
-    
+    return res;
+}
+
+// Compute B-spline vector using algorithm 2.19/2.20
+// Returns (B_{\mu-p,p}(x),...,B_{\mu,p}(x))
+Eigen::VectorXf bsplineVector(int p, int mu, float x, const std::vector<float>& knots) {
+    Eigen::MatrixXf res = bsplineMatrix(1, mu, x, knots);
+    for (int k = 2; k <= p; k++) {
+        res *= bsplineMatrix(k, mu, x, knots);
+    }
     return res;
 }
 
@@ -218,7 +228,7 @@ std::vector<float> uniformRegularKnotVector(int numPoints,
 Return the control point abscissa for the control polygon
 of a one-dimensional spline.
 */
-std::vector<float> controlPolygon(int p, const std::vector<float> knots) {
+std::vector<float> controlPolygon(int p, const std::vector<float>& knots) {
     int n = knots.size() - p - 1;
     std::vector<float> abscissas;
     for (int i = 0; i < n; i++) { 
@@ -296,6 +306,32 @@ std::vector<float> leastSquaresFit(const std::vector<float>& xs,
         res[i] = temp(i);
     }
     return res;
+}
+
+// Compute the control points of the derivative of a given spline.
+// The derivatoive of a degree-p spline with n B-spline coefficients
+// is a degree-(p-1) spline with n+1 control points and can be
+// expressed on the same knot vector.
+std::vector<float> computeDerivativeCoeffs(int degree,
+                                           const std::vector<float>& coeffs,
+                                           const std::vector<float>& knots) {
+    if (degree <= 0) throw std::runtime_error("Cannot differentiate a spline of degree lower than 1");
+    int n = coeffs.size();
+    std::vector<float> derCoeffs(n+1);
+    // Handle boundary cases
+    for (int i = 0; i < n+1; i++) {
+        float value;
+        if (i == 0) {
+            // left coundary condition
+            derCoeffs[i] = degree*coeffs[0]/(knots[i+degree]-knots[i]);
+        } else if (i == n) {
+            // right coundary condition
+            derCoeffs[i] = -degree*coeffs[i-1]/(knots[i+degree]-knots[i]);
+        } else {
+            derCoeffs[i] = degree*(coeffs[i]-coeffs[i-1])/(knots[i+degree]-knots[i]); 
+        }
+    }
+    return derCoeffs;
 }
 
 }   // end namespace bspline_storve
