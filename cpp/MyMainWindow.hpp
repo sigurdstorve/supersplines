@@ -48,6 +48,8 @@ private:
     QwtPlotCurve*           m_curve3;
     QwtPlotCurve*           m_curve4;
     QwtPlotCurve*           m_curve5;   // baseline
+    QwtPlotCurve*           m_curve6;   // control polygon of derivative
+    QwtPlotCurve*           m_curve7;   // zeros of derivative
 
     QwtPlot*                m_plot;
     
@@ -57,4 +59,7 @@ private:
     bool                    m_showDerivative;
     float                   m_derivativeScale;
     bool                    m_showBaseline;
+    bool                    m_showDerivPolygon;
+    bool                    m_showSplineFit;
+    bool                    m_showDerivZeros;
 };
