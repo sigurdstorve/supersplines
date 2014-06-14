@@ -46,10 +46,15 @@ private:
     QwtPlotCurve*           m_curve1;
     QwtPlotCurve*           m_curve2;
     QwtPlotCurve*           m_curve3;
-    
+    QwtPlotCurve*           m_curve4;
+    QwtPlotCurve*           m_curve5;   // baseline
+
     QwtPlot*                m_plot;
     
     bool                    m_showControlPolygon;
     
     QTweakWindow*           m_tweakWin;
+    bool                    m_showDerivative;
+    float                   m_derivativeScale;
+    bool                    m_showBaseline;
 };

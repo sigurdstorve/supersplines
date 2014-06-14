@@ -47,11 +47,17 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     m_degree = 2;
     m_numControlPoints = 20;
     m_showControlPolygon = true;
+    m_showDerivative = false;
+    m_derivativeScale = 0.01;
+    m_showBaseline = true;
 
     m_tweakWin = new QTweakWindow;
     m_tweakWin->registerVariable("m_degree", &m_degree, 0, 10);
     m_tweakWin->registerVariable("m_numControlPoints", &m_numControlPoints, 10, 100);
     m_tweakWin->registerVariable("m_showControlPolygon", &m_showControlPolygon);
+    m_tweakWin->registerVariable("m_showDerivative", &m_showDerivative);
+    m_tweakWin->registerVariable("m_derivativeScale", &m_derivativeScale, 0.0f, 2.0f);
+    m_tweakWin->registerVariable("m_showBaseline", &m_showBaseline);
     connect(m_tweakWin, SIGNAL(changesAvailable()), this, SLOT(refresh()));
     hlayout->addWidget(m_tweakWin);
     
@@ -61,6 +67,8 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     m_curve1 = new QwtPlotCurve("Least squares spline approx");
     m_curve2 = new QwtPlotCurve("Control Polygon");
     m_curve3 = new QwtPlotCurve("Raw data");
+    m_curve4 = new QwtPlotCurve("Derivative of fit");
+    m_curve5 = new QwtPlotCurve("Baseline");
     m_curve1->setRenderHint(QwtPlotItem::RenderAntialiased);
     auto sym = new QwtSymbol(QwtSymbol::XCross);
     m_curve1->attach(m_plot);
@@ -70,7 +78,11 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     m_curve2->attach(m_plot);
     m_curve3->setRenderHint(QwtPlotItem::RenderAntialiased);
     m_curve3->attach(m_plot);
-    
+    m_curve4->attach(m_plot);
+    m_curve4->setRenderHint(QwtPlotItem::RenderAntialiased);
+    m_curve5->attach(m_plot);
+    m_curve5->setRenderHint(QwtPlotItem::RenderAntialiased);
+
     loadCsvData(csvFile);
     updateSplineApprox();
     mainWidget->show();
@@ -104,10 +116,15 @@ void MyMainWindow::updateSplineApprox() {
     // by degree and knot vector.
     auto controlPoints = bspline_storve::leastSquaresFit(m_dataXs, m_dataYs, knots, m_degree);
 
+    m_curve5->setSamples(std::vector<double>({m_dataXs[0], m_dataXs[numSamples-1]}).data(),
+                         std::vector<double>({0.0, 0.0}).data(),
+                         2);
+
+
     // Render the spline approximation.
     std::vector<float> xs;
     std::vector<float> ys;
-    bspline_storve::linspace(m_dataXs[0], m_dataXs[numSamples-1], 1000, xs);
+    bspline_storve::linspace(m_dataXs[0], m_dataXs[numSamples-1], 2000, xs);
     ys = bspline_storve::renderSpline(m_degree, knots, controlPoints, xs);
 
     m_curve1->setPen(QPen(QColor(255, 0, 0)));
@@ -128,5 +145,27 @@ void MyMainWindow::updateSplineApprox() {
     
     m_curve2->setVisible(m_showControlPolygon);
     
+    if (m_showDerivative) {
+        std::cout << "DERIVATIVE\n";
+        // Compute spline coefficients of the derivative of the spline fit
+        int derDegree = m_degree-1;
+        std::vector<float> derCoeffs = bspline_storve::computeDerivativeCoeffs(m_degree, controlPoints, knots);
+        
+        for (int i = 0; i < derCoeffs.size(); i++) {
+            derCoeffs[i] *= m_derivativeScale;
+        }
+
+        // Render the spline derivative
+        std::vector<float> ysDer = bspline_storve::renderSpline(derDegree, knots, derCoeffs, xs);
+        auto ysDerDouble = stdVectorToDouble(ysDer);
+        for (int i = 0; i < ysDerDouble.size(); i++) {
+        //    std::cout << ysDerDouble[i] << std::endl;
+        }
+        m_curve4->setSamples(xsDouble.data(), ysDerDouble.data(), xsDouble.size());
+        m_curve4->setPen(QPen(QColor(0, 80, 0)));
+    }
+
+    m_curve5->setVisible(m_showBaseline);       
+
     m_plot->replot();
 }
