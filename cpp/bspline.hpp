@@ -389,4 +389,47 @@ void bohmsMethod(int degree,
 
 }
 
+// Experimental. Does not take identically equal to zero on an interval
+// possibility into account.
+// TODO: Fix handling of end-points and if a zero-crossing IS the zero exactly
+// (currently this breaks the algorithm)
+std::vector<float> computeZeros(int degree,
+                                std::vector<float> knots,
+                                std::vector<float> coeffs,
+                                int numIterations) {
+    std::vector<float> zeroTimes;
+    for (int iteration = 0; iteration < numIterations; iteration++) {
+        int numCoeffs = coeffs.size();
+        // Get the (updated) control polygon times
+        auto cpTimes = controlPolygon(degree, knots);
+        std::vector<float> tempTimes;
+        //std::cout << "*** Start of a new iteration\n";
+        //std::cout << "Coeffs:\n";
+        //for (int i = 0; i < numCoeffs; i++) {
+        //    std::cout << coeffs[i] << std::endl;
+        //}
+        for (int i = 1; i < numCoeffs; i++) {
+            //std::cout << coeffs[i-1]*coeffs[i] << std::endl;
+            if (coeffs[i-1]*coeffs[i] < 0.0) {
+                // Compute exactly where the zero-crossings occurs.
+                float t = (cpTimes[i-1]*coeffs[i]-cpTimes[i]*coeffs[i-1])/(coeffs[i]-coeffs[i-1]);
+                //std::cout << "zero at t=" << t << std::endl;
+                tempTimes.push_back(t);
+            }
+        }
+        // Insert a new knot at every zero-crossing that was found.
+        for (float zeroCrossTime : tempTimes) {            
+            std::vector<float> knotsOut, coeffsOut;
+            //std::cout << "inserting knot at " << zeroCrossTime << std::endl;
+            bohmsMethod(degree, zeroCrossTime, knots, coeffs, knotsOut, coeffsOut);
+            knots = knotsOut;
+            coeffs = coeffsOut;
+        }
+        //std::cout << "Found " << tempTimes.size() << " zero crossings\n";
+        //std::cout << "Current knot vector length: " << knots.size() << std::endl;
+        zeroTimes = tempTimes;
+    }
+    return zeroTimes;
+}
+
 }   // end namespace bspline_storve

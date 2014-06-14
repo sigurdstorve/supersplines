@@ -311,3 +311,24 @@ BOOST_AUTO_TEST_CASE(TestBohmsMethodUnchagedSpline) {
     }
 
 }
+/*
+BOOST_AUTO_TEST_CASE(TestZeroDetectionWhenNoZerosExists) {
+    std::vector<float> knots = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f};
+    std::vector<float> coeffs = {2.0f, 4.0f, 8.0f};
+    int degree = 3;
+    int numIterations = 10;
+    auto zeroTimes = bspline_storve::computeZeros(degree, knots, coeffs, numIterations);
+    BOOST_CHECK_EQUAL(zeroTimes.size(), 0);    
+}
+*/
+BOOST_AUTO_TEST_CASE(TestZeroDetection1) {
+    float tStart = 0.0f;
+    float tEnd = 1.0f;
+    int degree = 3;
+    std::vector<float> coeffs = {0.1f, 1.0f, -8.0f, -0.1f};
+    std::vector<float> knots = bspline_storve::uniformRegularKnotVector(coeffs.size(), degree, tStart, tEnd);
+    
+    int numIterations = 10;
+    auto zeroTimes = bspline_storve::computeZeros(degree, knots, coeffs, numIterations);
+    BOOST_CHECK_EQUAL(zeroTimes.size(), 1);    
+}
