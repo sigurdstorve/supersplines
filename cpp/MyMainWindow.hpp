@@ -8,6 +8,7 @@ class QwtPlotCurve;
 class QwtPlot;
 class QSlider;
 class QPushButton;
+class QTweakWindow;
 
 class MyMainWindow : public QMainWindow {
 Q_OBJECT
@@ -28,6 +29,9 @@ private slots:
         m_showControlPolygon = !m_showControlPolygon;
         updateSplineApprox();
     }
+
+    void refresh();
+
 private:
     void updateSplineApprox();
     
@@ -45,8 +49,7 @@ private:
     
     QwtPlot*                m_plot;
     
-    QSlider*                m_slider;
-    
-    QPushButton*            m_button;
     bool                    m_showControlPolygon;
+    
+    QTweakWindow*           m_tweakWin;
 };

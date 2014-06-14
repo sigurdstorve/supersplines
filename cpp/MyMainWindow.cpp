@@ -31,6 +31,12 @@ std::vector<double> stdVectorToDouble(const std::vector<float>& in) {
     return res;
 }
 
+void MyMainWindow::refresh() {
+    m_tweakWin->pushAll();
+    updateSplineApprox();
+}
+
+
 MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent) 
         : QMainWindow(parent) {
     QWidget* mainWidget = new QWidget;
@@ -42,26 +48,13 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     m_numControlPoints = 20;
     m_showControlPolygon = true;
 
-    QTweakWindow* tweakWin = new QTweakWindow;
-    float sigma = 0.0;
-    tweakWin->registerVariable("sigma", &sigma, 0.0, 10.0); 
-    tweakWin->registerVariable("m_degree", &m_degree, 0, 10);
-    tweakWin->registerVariable("m_numControlPoints", &m_numControlPoints, 10, 100);
-    tweakWin->registerVariable("m_showControlPolygon", &m_showControlPolygon);
-    hlayout->addWidget(tweakWin);
+    m_tweakWin = new QTweakWindow;
+    m_tweakWin->registerVariable("m_degree", &m_degree, 0, 10);
+    m_tweakWin->registerVariable("m_numControlPoints", &m_numControlPoints, 10, 100);
+    m_tweakWin->registerVariable("m_showControlPolygon", &m_showControlPolygon);
+    connect(m_tweakWin, SIGNAL(changesAvailable()), this, SLOT(refresh()));
+    hlayout->addWidget(m_tweakWin);
     
-
-
-    m_slider = new QSlider;
-    m_slider->setValue(m_numControlPoints);
-    connect(m_slider, SIGNAL(valueChanged(int)),
-            this, SLOT(setNumControlPoints(int)));
-    hlayout->addWidget(m_slider);
-    
-    m_button = new QPushButton("Control polygon on/off");
-    hlayout->addWidget(m_button);
-    connect(m_button, SIGNAL(released()), this, SLOT(toggleControlPolygon()));
-
     // Prepare plotting
     m_plot = new QwtPlot;
     hlayout->addWidget(m_plot);
@@ -88,10 +81,6 @@ void MyMainWindow::loadCsvData(const std::string& csvFile) {
     loadTimeSignal(csvFile, m_dataXs, m_dataYs);
     int numSamples = m_dataXs.size();
 
-    // Update slider limits to reflect new data
-    m_slider->setMinimum(m_degree+1);
-    m_slider->setMaximum(numSamples-1);
-    
     // Update xlim and ylim
     m_plot->setAxisScale(QwtPlot::xBottom, m_dataXs.front(), m_dataXs.back());
     
