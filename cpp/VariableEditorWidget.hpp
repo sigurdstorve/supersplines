@@ -6,6 +6,9 @@
 #include <QCheckBox>
 #include <QLineEdit>
 #include <QVector>
+#include <QFileInfo>
+#include <QPushButton>
+#include <QFileDialog>
 
 class VariableEditorWidget : public QWidget {
 Q_OBJECT
@@ -169,5 +172,50 @@ private slots:
 private:
     QString*            m_varPtr;
     QString             m_cachedValue;
+    QLineEdit*          m_lineEdit;
+};
+
+class QFileInfoEditorWidget : public VariableEditorWidget {
+Q_OBJECT
+public:
+    QFileInfoEditorWidget(QFileInfo* varPtr, QWidget* parent = 0) :
+            VariableEditorWidget(parent) {
+        QHBoxLayout* layout = new QHBoxLayout;
+        setLayout(layout);
+        
+        m_lineEdit = new QLineEdit;
+        connect(m_lineEdit, SIGNAL(textChanged(QString)), this, SLOT(valueChanged(QString)));
+        m_varPtr = varPtr;
+        layout->addWidget(m_lineEdit);
+        pull();
+
+        QPushButton* button = new QPushButton("Select file...");
+        connect(button, SIGNAL(clicked()), this, SLOT(buttonClicked()));
+        layout->addWidget(button);
+    }
+        
+    virtual void push() {
+        *m_varPtr = m_cachedValue;
+    }
+
+    virtual void pull() {
+        m_cachedValue = *m_varPtr;
+        m_lineEdit->setText(m_cachedValue.fileName());
+    }
+
+private slots:
+    void valueChanged(QString newValue) {
+        m_cachedValue = QFileInfo(newValue);
+        emit valueHasChanged();
+    }
+    
+    void buttonClicked() {
+        QString filename = QFileDialog::getOpenFileName(this, "Open file", "", "files (*.*)");
+        m_cachedValue = QFileInfo(filename);
+        m_lineEdit->setText(filename); // will indirectly emit valueHasChanged();
+    }
+private:
+    QFileInfo*          m_varPtr;
+    QFileInfo           m_cachedValue;
     QLineEdit*          m_lineEdit;
 };

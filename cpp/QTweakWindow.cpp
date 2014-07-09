@@ -34,6 +34,12 @@ void QTweakWindow::registerVariable(QString name, QString* varPtr) {
     connect(varEditor, SIGNAL(valueHasChanged()), this, SLOT(somethingChanged()));
     m_editors.append(varEditor);
 }
+void QTweakWindow::registerVariable(QString name, QFileInfo* varPtr) {
+    VariableEditorWidget* varEditor = new QFileInfoEditorWidget(varPtr);
+    m_formLayout->addRow(name, varEditor);
+    connect(varEditor, SIGNAL(valueHasChanged()), this, SLOT(somethingChanged()));
+    m_editors.append(varEditor);
+}
 
 void QTweakWindow::pushAll() {
     for (auto it = m_editors.begin(); it != m_editors.end(); ++it) {
