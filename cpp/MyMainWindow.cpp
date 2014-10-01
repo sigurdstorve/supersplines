@@ -22,7 +22,10 @@
 #include "MyMainWindow.hpp"
 
 std::vector<float> stdVectorToFloat(const std::vector<double>& in) {
-    std::vector<float> res(in.begin(), in.end());
+    std::vector<float> res(in.size());
+    for (size_t i = 0; i < in.size(); i++) {
+        res[i] = in[i];
+    }
     return res;
 }
 
@@ -48,7 +51,7 @@ MyMainWindow::MyMainWindow(const std::string& csvFile, QWidget* parent)
     m_numControlPoints = 20;
     m_showControlPolygon = true;
     m_showDerivative = false;
-    m_derivativeScale = 0.01;
+    m_derivativeScale = 0.01f;
     m_showBaseline = true;
     m_showDerivPolygon = false;
     m_showSplineFit = true;
@@ -132,9 +135,13 @@ void MyMainWindow::updateSplineApprox() {
     // by degree and knot vector.
     auto controlPoints = bspline_storve::leastSquaresFit(m_dataXs, m_dataYs, knots, m_degree);
 
-    m_curve5->setSamples(std::vector<double>({m_dataXs[0], m_dataXs[numSamples-1]}).data(),
-                         std::vector<double>({0.0, 0.0}).data(),
-                         2);
+    std::vector<double> xs_;
+    xs_.push_back(m_dataXs[0]);
+    xs_.push_back(m_dataXs[numSamples-1]);
+    std::vector<double> ys_;
+    ys_.push_back(0.0);
+    ys_.push_back(0.0);
+    m_curve5->setSamples(xs_.data(), ys_.data(), 2);
 
 
     // Render the spline approximation.
@@ -164,7 +171,7 @@ void MyMainWindow::updateSplineApprox() {
     // Compute spline coefficients of the derivative of the spline fit
     int derDegree = m_degree-1;
     std::vector<float> derCoeffs = bspline_storve::computeDerivativeCoeffs(m_degree, controlPoints, knots);
-    for (int i = 0; i < derCoeffs.size(); i++) {
+    for (size_t i = 0; i < derCoeffs.size(); i++) {
         derCoeffs[i] *= m_derivativeScale;
     }
 
@@ -192,10 +199,11 @@ void MyMainWindow::updateSplineApprox() {
     if (m_showDerivZeros) {
         std::vector<double> derZeroTimes;
         std::vector<double> derZeroValues;
-        for (int i = 0; i < zeroTimes.size(); i++) {
+        for (size_t i = 0; i < zeroTimes.size(); i++) {
             derZeroTimes.push_back(zeroTimes[i]);
             //derZeroValues.push_back(0.00f);
-            std::vector<float> tempTimes = {zeroTimes[i]};
+            std::vector<float> tempTimes;
+            tempTimes.push_back(zeroTimes[i]);
             auto tempValues = bspline_storve::renderSpline(m_degree, knots, controlPoints, tempTimes);
             derZeroValues.push_back(tempValues[0]);
         }

@@ -1,14 +1,21 @@
 cmake_minimum_required(VERSION 2.8)
 project(bsplines)
 
-option(BSPLINE_BUILD_QT "Build the Qt application" OFF)
-option(BSPLINE_BUILD_UNIT_TESTS "Build test using Boost.Test" OFF)
+option(BSPLINE_BUILD_QT             "Build the Qt application"    OFF)
+option(BSPLINE_BUILD_UNIT_TESTS     "Build test using Boost.Test" OFF)
 
-include_directories(d:/mingw_libs) # Temp. HACK: TODO: FIX
+# MSVC 2012 has C++11 enabled by default
+if (UNIX)
+    add_definitions(-std=c++11)
+endif()
+add_executable(bspline_demo
+               bspline.hpp
+               demo.cpp
+               )
 
-add_definitions(-std=c++11)
-add_executable(bspline_demo bspline.hpp demo.cpp)
-
+# No need for find_package for Eigen3 since it is header-only
+set(EIGEN3_INCLUDE_DIRS "" CACHE PATH "Include dir for Eigen3")
+include_directories(${EIGEN3_INCLUDE_DIRS})
 
 if (BSPLINE_BUILD_UNIT_TESTS)
     # Handle Boost
@@ -38,28 +45,19 @@ if (BSPLINE_BUILD_QT)
     qt4_wrap_cpp(qtapp_HEADERS_MOC ${qtapp_HEADERS})
     include(${QT_USE_FILE})
     
-    if (WIN32)
-        set(QWT_INCLUDE_DIRS "$ENV{QWT_ROOT}/include")
-        if(CMAKE_BUILD_TYPE STREQUAL "Release")
-            set(QWT_LIBRARIES "$ENV{QWT_ROOT}/lib/qwt.dll")
-            message(STATUS "Using release version of Qwt.")
-        else()
-            set(QWT_LIBRARIES "$ENV{QWT_ROOT}/lib/qwtd.dll")
-            message(STATUS "Using debug version of Qwt.")
-        endif()
-    elseif (UNIX)
-        find_package(Qwt REQUIRED)
-        if (NOT ${QWT_FOUND})
-            message(ERROR "Qwt library not found!")
-        endif()
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+    find_package(Qwt REQUIRED)
+    if (NOT ${QWT_FOUND})
+        message(ERROR "Qwt library not found!")
     endif()
     include_directories(${QWT_INCLUDE_DIRS})
         
     # Make main executable
     add_executable(qtdemo bspline.hpp ${qtapp_SOURCES} ${qtapp_HEADERS_MOC})
 
-    target_link_libraries(qtdemo ${QT_LIBRARIES})    
-    target_link_libraries(qtdemo ${QWT_LIBRARIES})
-    target_link_libraries(qtdemo ${OPENGL_LIBRARIES})
-    
+    target_link_libraries(qtdemo
+                          ${QT_LIBRARIES}
+                          ${QWT_LIBRARIES}
+                          ${OPENGL_LIBRARIES}
+                          )    
 endif()

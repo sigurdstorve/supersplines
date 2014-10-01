@@ -4,6 +4,12 @@
 
 using namespace bspline_storve;
 
+// Workaround for MSVC2012 not supporting curly brace initialization for std::vector
+template <typename T, size_t N>
+std::vector<T> makeVector(const T(&data)[N]) {
+    return std::vector<T>(data, data + N);
+}
+
 std::vector<float> stdVectorToFloat(const std::vector<double>& in) {
     std::vector<float> res(in.begin(), in.end());
     return res;
@@ -11,7 +17,9 @@ std::vector<float> stdVectorToFloat(const std::vector<double>& in) {
 
 void testBasisFunctions1() {
     // Enough knots for one cubic b-spline
-    std::vector<float> knots = {0.0, 1.0, 1.0, 3.0, 4.0};
+
+    const float tempKnots[] = {0.0, 1.0, 1.0, 3.0, 4.0};
+    std::vector<float> knots = makeVector(tempKnots);
     float x = 1.0;
     int p = 3;
     float b = bsplineBasis(0, p, x, knots);
@@ -21,7 +29,8 @@ void testBasisFunctions1() {
 void testBSplineMatrix() {
     int k = 3;
     int mu = 3;
-    std::vector<float> knots = {1,2,3,4,5,6,7,8,9,10,11,12};
+    const float tempKnots[] = {1,2,3,4,5,6,7,8,9,10,11,12};
+    std::vector<float> knots = makeVector(tempKnots);
     float x = 1.0f;
     auto res = bsplineMatrix(k, mu, x, knots);
     std::cout << "Bk = " << res << std::endl;
@@ -29,7 +38,8 @@ void testBSplineMatrix() {
 
 void testDegree1() {
     std::cout << __FUNCTION__ << std::endl;
-    std::vector<float> knots = {0.0, 1.0, 3.0};
+    const float tempKnots[] = {0.0, 1.0, 3.0};
+    std::vector<float> knots = makeVector(tempKnots);
     bool pass = true;
     for (float x = -1.0; x < 4.0; x += 0.001f) {
         float b1 = bsplineBasis(0, 1, x, knots);
@@ -46,7 +56,8 @@ void testDegree1() {
 
 void testDegree2() {
     std::cout << __FUNCTION__ << std::endl;
-    std::vector<float> knots = {0.0, 1.0, 3.0, 4.0};
+    const float tempKnots[] = {0.0f, 1.0f, 3.0f, 4.0f};
+    std::vector<float> knots = makeVector(tempKnots);
     bool pass = true;
     for (float x = -1.0; x < 5.0; x += 0.001f) {
         float b1 = bsplineBasis(0, 2, x, knots);
@@ -63,7 +74,8 @@ void testDegree2() {
 
 void testDegree3() {
     std::cout << __FUNCTION__ << std::endl;
-    std::vector<float> knots = {0.0, 1.0, 3.0, 4.0, 5.0, 6.0};
+    const float tempKnots[] = {0.0, 1.0, 3.0, 4.0, 5.0, 6.0};
+    std::vector<float> knots = makeVector(tempKnots);
     bool pass = true;
     for (int j = 0; j < 2; j++) {
         for (float x = -1.0; x < 7.0; x += 0.001f) {

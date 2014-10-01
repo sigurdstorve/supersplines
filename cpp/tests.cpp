@@ -1,26 +1,32 @@
-#define BOOST_TEST_DYN_LINK
+//#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MAIN
 #include <vector>
 #include <utility>  // for std::pair
 #include <boost/test/unit_test.hpp>
 #include "bspline.hpp"
 
+// Workaround for MSVC2012 not supporting curly brace initialization for std::vector
+template <typename T, size_t N>
+std::vector<T> makeVector(const T(&data)[N]) {
+    return std::vector<T>(data, data + N);
+}
+
 // Verfify that the simple implementation of linspace() works
 // as expected. (Needed e.g. to generate not vectors)
 BOOST_AUTO_TEST_CASE(LinspaceSanityCheck) {
     std::vector<float> v;
-    bspline_storve::linspace(0.0, 1.0, 3, v);
+    bspline_storve::linspace(0.0f, 1.0f, 3, v);
     BOOST_CHECK_CLOSE(v[0], 0.0, 0.0001);
     BOOST_CHECK_CLOSE(v[1], 0.5, 0.0001);
     BOOST_CHECK_CLOSE(v[2], 1.0, 0.0001);
 
-    bspline_storve::linspace(0.0, 1.0, 0, v);
+    bspline_storve::linspace(0.0f, 1.0f, 0, v);
     BOOST_CHECK_EQUAL(v.size(), 0);
     
-    bspline_storve::linspace(0.0, 10.0, 1, v);
+    bspline_storve::linspace(0.0f, 10.0f, 1, v);
     BOOST_CHECK_CLOSE(v[0], 0.0, 0.0001);
     
-    bspline_storve::linspace(0.0, 10.0, 2, v);
+    bspline_storve::linspace(0.0f, 10.0f, 2, v);
     BOOST_CHECK_CLOSE(v[0], 0.0, 0.0001);
     BOOST_CHECK_CLOSE(v[1], 10.0, 0.0001);
 }
@@ -32,10 +38,11 @@ BOOST_AUTO_TEST_CASE(UniformRegularKnotVectorTest) {
     float tStart = 1.0f;
     float tEnd = 2.0f;
     
-    std::vector<float> desired = {1.0f, 1.0f, 1.0f, 1.0f, 1.25f, 1.50f, 1.75f, 2.0f, 2.0f, 2.0f, 2.0};
+    const float tempDesired[] = {1.0f, 1.0f, 1.0f, 1.0f, 1.25f, 1.50f, 1.75f, 2.0f, 2.0f, 2.0f, 2.0};
+    std::vector<float> desired = makeVector(tempDesired);
     auto knots = bspline_storve::uniformRegularKnotVector(numPoints, degree, tStart, tEnd);
     BOOST_CHECK_EQUAL(knots.size(), 11);
-    for (int i = 0; i < knots.size(); i++) {
+    for (size_t i = 0; i < knots.size(); i++) {
         BOOST_CHECK_CLOSE(knots[i], desired[i], 0.0001);
     }
     
@@ -54,7 +61,8 @@ BOOST_AUTO_TEST_CASE(UniformRegularKnotVectorTest) {
 BOOST_AUTO_TEST_CASE(CompareAnalyticalAndRecursiveDegree1) {
     int degree = 1;
     // Knots for 6 degree-1 B-splines.
-    std::vector<float> knots = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
+    const float tempKnots[] = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
+    std::vector<float> knots = makeVector(tempKnots);
     for (int basisFuncNo = 0; basisFuncNo < 6; basisFuncNo++) {
         for (float t = -2.0f; t <= 12.0f; t+=0.01f) {
             float recursive = bspline_storve::bsplineBasis(basisFuncNo,
@@ -72,7 +80,8 @@ BOOST_AUTO_TEST_CASE(CompareAnalyticalAndRecursiveDegree1) {
 BOOST_AUTO_TEST_CASE(CompareAnalyticalAndRecursiveDegree2) {
     int degree = 2;
     // Knots for 5 degree-2 B-splines.
-    std::vector<float> knots = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
+    const float tempKnots[] = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
+    std::vector<float> knots = makeVector(tempKnots);
     for (int basisFuncNo = 0; basisFuncNo < 5; basisFuncNo++) {
         for (float t = -2.0f; t <= 12.0f; t+=0.01f) {
             float recursive = bspline_storve::bsplineBasis(basisFuncNo,
@@ -90,7 +99,8 @@ BOOST_AUTO_TEST_CASE(CompareAnalyticalAndRecursiveDegree2) {
 BOOST_AUTO_TEST_CASE(CompareAnalyticalAndRecursiveDegree3) {
     int degree = 3;
     // Knots for 4 degree-3 B-splines.
-    std::vector<float> knots = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
+    const float tempKnots[] = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
+    std::vector<float> knots = makeVector(tempKnots);
     for (int basisFuncNo = 0; basisFuncNo < 4; basisFuncNo++) {
         for (float t = -2.0f; t <= 12.0f; t+=0.01f) {
             float recursive = bspline_storve::bsplineBasis(basisFuncNo,
@@ -105,18 +115,34 @@ BOOST_AUTO_TEST_CASE(CompareAnalyticalAndRecursiveDegree3) {
 
 // Verify that the knot span finder is correct
 BOOST_AUTO_TEST_CASE(TestKnotSpanFinder) {
-    std::vector<float> knots = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
-    std::vector<std::pair<float, int> > testPairs{
-        {-1.0f, 0}, {-0.5f, 0}, {-0.01f, 0},
-        {0.0f, 0}, {0.5f, 0}, {0.9f,  0},
-        {1.0f, 1}, {1.1f, 1}, {1.99f, 1},
-        {2.0f, 2}, {3.4f, 2}, {3.99f, 2},
-        {4.0f, 3}, {4.1f, 3}, {4.99f, 3},
-        {5.0f, 4}, {6.0f, 4}, {6.99f, 4},
-        {7.0f, 5}, {9.0f, 5}, {9.99f, 5},
-        {10.0f, 6}, {10.5f, 6}, {10.99f, 6}
-    };
-    
+    const float tempKnots[] = {-1.0f, 1.0f, 2.0f, 4.0f, 5.0f, 7.0f, 10.0f, 11.0f};
+    std::vector<float> knots = makeVector(tempKnots);
+    std::vector<std::pair<float, int> > testPairs;
+    testPairs.push_back(std::pair<float, int>(-1.0f, 0));
+    testPairs.push_back(std::pair<float, int>(-0.5f, 0));
+    testPairs.push_back(std::pair<float, int>(-0.01f, 0));
+    testPairs.push_back(std::pair<float, int>(0.0f, 0));
+    testPairs.push_back(std::pair<float, int>(0.5f, 0));
+    testPairs.push_back(std::pair<float, int>(0.9f,  0));
+    testPairs.push_back(std::pair<float, int>(1.0f, 1));
+    testPairs.push_back(std::pair<float, int>(1.1f, 1));
+    testPairs.push_back(std::pair<float, int>(1.99f, 1));
+    testPairs.push_back(std::pair<float, int>(2.0f, 2));
+    testPairs.push_back(std::pair<float, int>(3.4f, 2));
+    testPairs.push_back(std::pair<float, int>(3.99f, 2));
+    testPairs.push_back(std::pair<float, int>(4.0f, 3));
+    testPairs.push_back(std::pair<float, int>(4.1f, 3));
+    testPairs.push_back(std::pair<float, int>(4.99f, 3));
+    testPairs.push_back(std::pair<float, int>(5.0f, 4));
+    testPairs.push_back(std::pair<float, int>(6.0f, 4));
+    testPairs.push_back(std::pair<float, int>(6.99f, 4));
+    testPairs.push_back(std::pair<float, int>(7.0f, 5));
+    testPairs.push_back(std::pair<float, int>(9.0f, 5));
+    testPairs.push_back(std::pair<float, int>(9.99f, 5));
+    testPairs.push_back(std::pair<float, int>(10.0f, 6));
+    testPairs.push_back(std::pair<float, int>(10.5f, 6));
+    testPairs.push_back(std::pair<float, int>(10.99f, 6));
+        
     int lastMu = 1000; // crazy guess should not cause error
     for (auto it = testPairs.begin(); it != testPairs.end(); ++it) {
         float t = it->first;
@@ -133,7 +159,7 @@ BOOST_AUTO_TEST_CASE(TestKnotSpanFinder) {
 // Verfify that the dimensionality of B-spline matrices are correct
 BOOST_AUTO_TEST_CASE(TestBSplineMatrixDimensions) {
     int mu = 0;
-    int x = 0.0f;
+    float x = 0.0f;
     for (int k = 1; k < 8; k++) {
         std::vector<float> knots(10*k);
         Eigen::MatrixXf m = bspline_storve::bsplineMatrix(k, mu, x, knots);
@@ -168,7 +194,8 @@ BOOST_AUTO_TEST_CASE(TestControlPolygonAndRegularKnorVector) {
 
 // Verify correctness of control polygon times in some concrete cases
 BOOST_AUTO_TEST_CASE(TestControlPolygonConcreteCases) {
-    std::vector<float> knots = {1.0f, 3.0f, 4.0f, 5.0f, 6.0f};
+    const float tempKnots[] = {1.0f, 3.0f, 4.0f, 5.0f, 6.0f};
+    std::vector<float> knots = makeVector(tempKnots);
     std::vector<float> cpTimes;
     int degree;
 
@@ -191,7 +218,8 @@ BOOST_AUTO_TEST_CASE(TestControlPolygonConcreteCases) {
 // Verify that the cubic B-splines are correctly computed as products
 // of B-spline matrices.
 BOOST_AUTO_TEST_CASE(TestCubicBSplineMatrixProduct) {
-    std::vector<float> knots = {-2.0f, -0.5f, 0.0f, 1.0f, 2.0f, 2.5f, 3.3f, 4.0f, 5.0f, 6.0f, 7.5f, 8.0f, 9.0f, 10.0f};
+    const float tempKnots[] = {-2.0f, -0.5f, 0.0f, 1.0f, 2.0f, 2.5f, 3.3f, 4.0f, 5.0f, 6.0f, 7.5f, 8.0f, 9.0f, 10.0f};
+    std::vector<float> knots = makeVector(tempKnots);
     int degree = 3;
     int lastMu = 1000; // crazy guess should not cause errors
     for (float t = 1.0f; t < 5.99f; t += 0.01f) {
@@ -217,25 +245,30 @@ BOOST_AUTO_TEST_CASE(TestCubicBSplineMatrixProduct) {
 BOOST_AUTO_TEST_CASE(TestSplineDerivativeCoeffsComputationDegree1) {
     int degree = 1;
     std::vector<float> knots;
-    std::vector<float> coeffs = {1.0f};
+    std::vector<float> coeffs;
+    coeffs.push_back(1.0f);
     
     // Test case: uniform knot spacing
-    knots = {1.0f, 2.0f, 3.0f};
+    const float tempKnots1[] = {1.0f, 2.0f, 3.0f};
+    knots = makeVector(tempKnots1);
     std::vector<float> derCoeffs = bspline_storve::computeDerivativeCoeffs(degree, coeffs, knots);
     BOOST_CHECK_EQUAL(derCoeffs.size(), 2);
     BOOST_CHECK_CLOSE(derCoeffs[0], 1.0, 0.0001);
     BOOST_CHECK_CLOSE(derCoeffs[1], -1.0, 0.0001);
 
     // Test case: non-uniform spacing
-    knots = {-1.0f, 0.0f, 2.0f};
+    const float tempKnots2[] = {-1.0f, 0.0f, 2.0f};
+    knots = makeVector(tempKnots2);
     derCoeffs = bspline_storve::computeDerivativeCoeffs(degree, coeffs, knots);
     BOOST_CHECK_EQUAL(derCoeffs.size(), 2);
     BOOST_CHECK_CLOSE(derCoeffs[0], 1.0, 0.0001);
     BOOST_CHECK_CLOSE(derCoeffs[1], -0.5, 0.0001);
 
     // Test case: non-uniform spacing and more than one coeff
-    coeffs = {0.0f, 1.0f, 0.0f};
-    knots = {1.0f, 2.0f, 4.0f, 8.0f, 16.0f};
+    const float tempCoeffs[] = {0.0f, 1.0f, 0.0f};
+    coeffs = makeVector(tempCoeffs);
+    const float tempCoeffs3[] = {1.0f, 2.0f, 4.0f, 8.0f, 16.0f};
+    knots = makeVector(tempCoeffs3);
     derCoeffs = bspline_storve::computeDerivativeCoeffs(degree, coeffs, knots);
     BOOST_CHECK_EQUAL(derCoeffs.size(), 4);
     BOOST_CHECK_CLOSE(derCoeffs[0], 0.0, 0.0001);
@@ -252,8 +285,10 @@ BOOST_AUTO_TEST_CASE(TestBohmsMethodSimple) {
     std::vector<float> knotsOut, coeffsOut;
 
     degree = 0;
-    knots = {1.0f, 2.0f, 3.0f, 4.0f};
-    coeffs = {1.0f, -1.0, 2.0f};
+    const float tempKnots[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    knots = makeVector(tempKnots);
+    const float tempCoeffs[] = {1.0f, -1.0, 2.0f};
+    coeffs = makeVector(tempCoeffs);
     float newKnot = 2.5f;
     bspline_storve::bohmsMethod(degree, newKnot, knots, coeffs, knotsOut, coeffsOut);
     BOOST_REQUIRE_CLOSE(knotsOut[0], 1.0f, 0.0001);
@@ -278,7 +313,7 @@ BOOST_AUTO_TEST_CASE(TestBohmsMethodUnchagedSpline) {
     // One big vector of coefficients - used by all tests
     std::vector<float> originalCoeffs;
     for (int i = 0; i < numCs; i++) {
-        originalCoeffs.push_back(-10 + i*i);
+        originalCoeffs.push_back(static_cast<float>(-10 + i*i));
     }
 
     // Generate the vector of parameter values where the original and
@@ -292,7 +327,7 @@ BOOST_AUTO_TEST_CASE(TestBohmsMethodUnchagedSpline) {
         std::vector<float> coeffs = originalCoeffs;
 
         // Add a knot and recompute coeffs
-        for (float newKnot = tStart; newKnot < tEnd; newKnot += 0.01) {
+        for (float newKnot = tStart; newKnot < tEnd; newKnot += 0.01f) {
             std::vector<float> knotsOut, coeffsOut;
             bspline_storve::bohmsMethod(degree, newKnot, knots, coeffs, knotsOut, coeffsOut);
             BOOST_CHECK_EQUAL(knotsOut.size(), knots.size()+1);
@@ -304,7 +339,7 @@ BOOST_AUTO_TEST_CASE(TestBohmsMethodUnchagedSpline) {
             // Evaluate and compare the original and cumulatively refined - they shall always be the same.
             auto originalEval = bspline_storve::renderSpline(degree, originalKnots, originalCoeffs, checkParValues);
             auto refinedEval = bspline_storve::renderSpline(degree, knotsOut, coeffsOut, checkParValues);
-            for (int i = 0; i < originalEval.size(); i++) {
+            for (size_t i = 0; i < originalEval.size(); i++) {
                 BOOST_CHECK_CLOSE(originalEval[i], refinedEval[i], 0.0001);
             }
         }
@@ -325,7 +360,8 @@ BOOST_AUTO_TEST_CASE(TestZeroDetection1) {
     float tStart = 0.0f;
     float tEnd = 1.0f;
     int degree = 3;
-    std::vector<float> coeffs = {0.1f, 1.0f, -8.0f, -0.1f};
+    const float tempCoeffs[] = {0.1f, 1.0f, -8.0f, -0.1f};
+    std::vector<float> coeffs = makeVector(tempCoeffs);
     std::vector<float> knots = bspline_storve::uniformRegularKnotVector(coeffs.size(), degree, tStart, tEnd);
     
     int numIterations = 10;

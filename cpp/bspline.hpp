@@ -4,13 +4,14 @@
 #include <vector>
 #include <stdexcept>
 
-// Workaround for MinGW bug
-#pragma GCC optimize ("-fno-ipa-cp-clone")
+// TODO: Stuff using Eigen3 is hardcoded to use float and not
+// double. Is this ok?
 
 namespace bspline_storve {
 
 // Simple implementation of functionality like NumPy's linspace()
-void linspace(float left, float right, int n, std::vector<float>& res) {
+template <typename T>
+void linspace(T left, T right, int n, std::vector<T>& res) {
     if (n < 0) {
         return;
     }
@@ -46,16 +47,17 @@ T _specialDiv(T num, T den) {
 //  j:  B-spline basis no.
 //  p:  Polynomial degree
 //  knots: knot vector (must support indexing with [])
-float bsplineBasis(int j, int p, float x, const std::vector<float>& knots) {
+template <typename T>
+T bsplineBasis(int j, int p, T x, const std::vector<T>& knots) {
     if (p == 0 ) {
         if ( (x >= knots[j]) && (x < knots[j+1]) ) {
-            return 1.0f;
+            return 1.0;
         } else {
-            return 0.0f;
+            return 0.0;
         }
     } else {
-        float left = _specialDiv((x-knots[j])*bsplineBasis(j,p-1,x,knots), knots[j+p]-knots[j]);
-        float right = _specialDiv((knots[j+1+p]-x)*bsplineBasis(j+1,p-1,x,knots), knots[j+1+p]-knots[j+1]);
+        T left = _specialDiv((x-knots[j])*bsplineBasis(j,p-1,x,knots), knots[j+p]-knots[j]);
+        T right = _specialDiv((knots[j+1+p]-x)*bsplineBasis(j+1,p-1,x,knots), knots[j+1+p]-knots[j+1]);
         return left + right;
     }
 }
@@ -66,13 +68,14 @@ float bsplineBasis(int j, int p, float x, const std::vector<float>& knots) {
     Optional to supply a suggestion to try first.
     Throws on error.
 */
-int getMu(float x, const std::vector<float>& knots, int mu=-1) {
-    if (mu != -1 && (mu <= knots.size()-2) && (mu >= 0)) {
+template <typename T>
+int getMu(T x, const std::vector<T>& knots, int mu=-1) {
+    if (mu != -1 && (mu <= static_cast<int>(knots.size())-2) && (mu >= 0)) {
         if (x >= knots[mu] && x < knots[mu+1]) {
             return mu;
         }
     }
-    for (int mu = 0; mu < (knots.size()-1); mu++) {
+    for (int mu = 0; mu < (static_cast<int>(knots.size())-1); mu++) {
         if (x >= knots[mu] && x < knots[mu+1]) {
             return mu;
         }
@@ -81,7 +84,8 @@ int getMu(float x, const std::vector<float>& knots, int mu=-1) {
 }
 
 // Compute B-spline matrix from theorem 2.18
-Eigen::MatrixXf bsplineMatrix(int k, int mu, float x, const std::vector<float>& knots) {
+template <typename T>
+Eigen::MatrixXf bsplineMatrix(int k, int mu, T x, const std::vector<T>& knots) {
     if (k <= 0) throw std::runtime_error("k must be greater than zero");
     Eigen::MatrixXf res(k, k+1);
     for (int row = 0; row <k; row++) {
@@ -90,7 +94,7 @@ Eigen::MatrixXf bsplineMatrix(int k, int mu, float x, const std::vector<float>& 
         }
     }    
     for (int row = 0; row < k; row++) {
-        float common_denom = knots[mu+(row+1)] - knots[mu+(row+1)-k];
+        T common_denom = knots[mu+(row+1)] - knots[mu+(row+1)-k];
         res(row,row) = _specialDiv(knots[mu+(row+1)] - x, common_denom);
         res(row,row+1) = _specialDiv(x - knots[mu + (row+1) - k], common_denom);
     }
@@ -99,7 +103,8 @@ Eigen::MatrixXf bsplineMatrix(int k, int mu, float x, const std::vector<float>& 
 
 // Compute B-spline vector using algorithm 2.19/2.20
 // Returns (B_{\mu-p,p}(x),...,B_{\mu,p}(x))
-Eigen::VectorXf bsplineVector(int p, int mu, float x, const std::vector<float>& knots) {
+template <typename T>
+Eigen::VectorXf bsplineVector(int p, int mu, T x, const std::vector<T>& knots) {
     Eigen::MatrixXf res = bsplineMatrix(1, mu, x, knots);
     for (int k = 2; k <= p; k++) {
         res *= bsplineMatrix(k, mu, x, knots);
@@ -108,15 +113,17 @@ Eigen::VectorXf bsplineVector(int p, int mu, float x, const std::vector<float>& 
 }
 
 // Direkte
-float B0(int j, float x, const std::vector<float>& knots) {
+template <typename T>
+T B0(int j, T x, const std::vector<T>& knots) {
     if (knots[j] <= x && x < knots[j+1]) {
-        return 1.0f;
+        return 1.0;
     } else {
-        return 0.0f;
+        return 0.0;
     }
 }
 
-float B1(int j, float x, const std::vector<float>& knots) {
+template <typename T>
+T B1(int j, T x, const std::vector<T>& knots) {
     if (knots[j] <= x && x < knots[j+1]) {
         // *B_{j,0}
         return (
@@ -128,11 +135,12 @@ float B1(int j, float x, const std::vector<float>& knots) {
             (knots[j+2]-x) / (knots[j+2]-knots[j+1])
         );
     } else {
-        return 0.0f;
+        return 0.0;
     } 
 }
 
-float B2(int j, float x, const std::vector<float>& knots) {
+template <typename T>
+T B2(int j, T x, const std::vector<T>& knots) {
     if (knots[j] <= x && x < knots[j+1]) {
         // *B_{j,0}
         return (
@@ -150,11 +158,12 @@ float B2(int j, float x, const std::vector<float>& knots) {
             ((knots[j+3]-x)/(knots[j+3]-knots[j+1]))*((knots[j+3]-x)/(knots[j+3]-knots[j+2]))
         );
     } else {
-        return 0.0f;
+        return 0.0;
     }
 }
 
-float B3(int j, float x, const std::vector<float>& knots) {
+template <typename T>
+T B3(int j, T x, const std::vector<T>& knots) {
     if (knots[j] <= x && x < knots[j+1]) {
         // *B_{j,0}
         return (
@@ -180,7 +189,7 @@ float B3(int j, float x, const std::vector<float>& knots) {
             ((knots[j+4]-x)/(knots[j+4]-knots[j+1]))*((knots[j+4]-x)/(knots[j+4]-knots[j+2]))*((knots[j+4]-x)/(knots[j+4]-knots[j+3]))
         );
     } else {
-        return 0.0f;
+        return 0.0;
     }
 }
 
@@ -191,26 +200,27 @@ Throws if n is too small
 endHack: Make the last knot bigger than the one before it, which has the
 effect of making it non-zero in last knot value.
 */
-std::vector<float> uniformRegularKnotVector(int numPoints,
-                                            int degree,
-                                            float tStart=0.0f,
-                                            float tEnd=1.0f,
-                                            bool endHack=false) {
+template <typename T>
+std::vector<T> uniformRegularKnotVector(int numPoints,
+                                        int degree,
+                                        T tStart=0.0,
+                                        T tEnd=1.0,
+                                        bool endHack=false) {
 
     // The minimum length of a degree+1-regular knot vector is 2*(degree+1)
     if (numPoints < degree+1) {
         throw std::runtime_error("Too small n for a uniform regular knot vector");
     }
     
-    std::vector<float> knots;
+    std::vector<T> knots;
     // degree+1 copies of tStart left and degree+1 copies of tEnd right
     // but one of each in linspace
     for (int i = 0; i < degree; i++) {
         knots.push_back(tStart);
     }
-    std::vector<float> temp;
+    std::vector<T> temp;
     linspace(tStart, tEnd, numPoints+1-degree, temp);
-    for (float t : temp) {
+    for (T t : temp) {
         knots.push_back(t);
     }
     for (int i = 0; i < degree; i++) {
@@ -219,7 +229,7 @@ std::vector<float> uniformRegularKnotVector(int numPoints,
     
     if (endHack) {
         int numKnots = knots.size();
-        knots[numKnots-1] += 1.0f;
+        knots[numKnots-1] += 1.0;
     }
     return knots;
 }
@@ -228,11 +238,12 @@ std::vector<float> uniformRegularKnotVector(int numPoints,
 Return the control point abscissa for the control polygon
 of a one-dimensional spline.
 */
-std::vector<float> controlPolygon(int p, const std::vector<float>& knots) {
+template <typename T>
+std::vector<T> controlPolygon(int p, const std::vector<T>& knots) {
     int n = knots.size() - p - 1;
-    std::vector<float> abscissas;
+    std::vector<T> abscissas;
     for (int i = 0; i < n; i++) { 
-        float sum = 0.0f;
+        T sum = 0.0;
         for (int j = 1; j <= p; j++) {
             sum += knots[i+j];
         }
@@ -245,14 +256,15 @@ std::vector<float> controlPolygon(int p, const std::vector<float>& knots) {
 Compute points on a spline function using the straightforward
 implementation of the recurrence relation for the B-splines.
 */
-std::vector<float> renderSpline(int p,
-                                const std::vector<float>& knots,
-                                const std::vector<float>& controlPoints,
-                                const std::vector<float>& ts) {
-    std::vector<float> ys;
-    for (float t : ts) {
-        float y = 0.0f; 
-        for (int j = 0; j < controlPoints.size(); j++) {
+template <typename T>
+std::vector<T> renderSpline(int p,
+                            const std::vector<T>& knots,
+                            const std::vector<T>& controlPoints,
+                            const std::vector<T>& ts) {
+    std::vector<T> ys;
+    for (T t : ts) {
+        T y = 0.0; 
+        for (size_t j = 0; j < controlPoints.size(); j++) {
             y += bsplineBasis(j, p, t, knots)*controlPoints[j];
         }
         ys.push_back(y);
@@ -264,11 +276,12 @@ std::vector<float> renderSpline(int p,
 Approximate given data points by a spline in a 
 given spline space through least-squares.
 */
-std::vector<float> leastSquaresFit(const std::vector<float>& xs,
-                                   const std::vector<float>& ys,
-                                   const std::vector<float>& knots,
-                                   int p,
-                                   const std::vector<float>& _weights = {}) {
+template <typename T>
+std::vector<T> leastSquaresFit(const std::vector<T>& xs,
+                               const std::vector<T>& ys,
+                               const std::vector<T>& knots,
+                               int p,
+                               const std::vector<T>& _weights = std::vector<T>()) {
     int numKnots = knots.size();
     int numDataPoints = xs.size();
     //assert(ys.size() == numDataPoints);
@@ -277,9 +290,9 @@ std::vector<float> leastSquaresFit(const std::vector<float>& xs,
     // to use in the approximation.
     int numApproxPoints = numKnots - p - 1;
    
-    std::vector<float> weights(numDataPoints);
+    std::vector<T> weights(numDataPoints);
     if (_weights.size() == 0) {
-        for (int i = 0; i < numDataPoints; i++) weights[i] = 1.0f;
+        for (int i = 0; i < numDataPoints; i++) weights[i] = 1.0;
     } else {
        weights = _weights;
     }
@@ -301,7 +314,7 @@ std::vector<float> leastSquaresFit(const std::vector<float>& xs,
     // Compute least-squares coefficients
     Eigen::VectorXf temp = (A.transpose()*A).ldlt().solve(A.transpose()*b);
     assert(temp.size() == numApproxPoints);
-    std::vector<float> res(numApproxPoints);
+    std::vector<T> res(numApproxPoints);
     for (int i = 0; i < numApproxPoints; i++) {
         res[i] = temp(i);
     }
@@ -312,20 +325,20 @@ std::vector<float> leastSquaresFit(const std::vector<float>& xs,
 // The derivatoive of a degree-p spline with n B-spline coefficients
 // is a degree-(p-1) spline with n+1 control points and can be
 // expressed on the same knot vector.
-std::vector<float> computeDerivativeCoeffs(int degree,
-                                           const std::vector<float>& coeffs,
-                                           const std::vector<float>& knots) {
+template <typename T>
+std::vector<T> computeDerivativeCoeffs(int degree,
+                                       const std::vector<T>& coeffs,
+                                       const std::vector<T>& knots) {
     if (degree <= 0) throw std::runtime_error("Cannot differentiate a spline of degree lower than 1");
     int n = coeffs.size();
-    std::vector<float> derCoeffs(n+1);
+    std::vector<T> derCoeffs(n+1);
     // Handle boundary cases
     for (int i = 0; i < n+1; i++) {
-        float value;
         if (i == 0) {
             // left coundary condition
             auto denominator = knots[i+degree]-knots[i];
             if (_floatIsZero(denominator)) {
-                derCoeffs[i] = 0.0f;
+                derCoeffs[i] = 0.0;
             } else {
                 derCoeffs[i] = degree*coeffs[0]/denominator;
             }
@@ -333,14 +346,14 @@ std::vector<float> computeDerivativeCoeffs(int degree,
             // right coundary condition
             auto denominator = knots[i+degree]-knots[i];
             if (_floatIsZero(denominator)) {
-                derCoeffs[i] = 0.0f;
+                derCoeffs[i] = 0.0;
             } else {
                 derCoeffs[i] = -degree*coeffs[i-1]/denominator;
             }
         } else {
             auto denominator = knots[i+degree]-knots[i];
             if (_floatIsZero(denominator)) {
-                derCoeffs[i] = 0.0f;
+                derCoeffs[i] = 0.0;
             } else {
                 derCoeffs[i] = degree*(coeffs[i]-coeffs[i-1])/denominator; 
             }
@@ -353,12 +366,13 @@ std::vector<float> computeDerivativeCoeffs(int degree,
 // obtained by adding one new knot to an existsing.
 // This is done using Böhm's method.
 // NOTE: The new knot z must be within the knot vector.
+template <typename T>
 void bohmsMethod(int degree,
-                 float z,
-                 const std::vector<float>& knotsIn,
-                 const std::vector<float>& coeffsIn,
-                 std::vector<float>& knotsOut,
-                 std::vector<float>& coeffsOut) {
+                 T z,
+                 const std::vector<T>& knotsIn,
+                 const std::vector<T>& coeffsIn,
+                 std::vector<T>& knotsOut,
+                 std::vector<T>& coeffsOut) {
     int numKnots = knotsIn.size();
     int numCoeffs = coeffsIn.size();
     if (z < knotsIn[0] || z > knotsIn[numKnots-1]) throw std::runtime_error("New knot not within knot vector");
@@ -393,16 +407,17 @@ void bohmsMethod(int degree,
 // possibility into account.
 // TODO: Fix handling of end-points and if a zero-crossing IS the zero exactly
 // (currently this breaks the algorithm)
-std::vector<float> computeZeros(int degree,
-                                std::vector<float> knots,
-                                std::vector<float> coeffs,
-                                int numIterations) {
-    std::vector<float> zeroTimes;
+template <typename T>
+std::vector<T> computeZeros(int degree,
+                            std::vector<T> /*not reference!*/ knots,
+                            std::vector<T> /*not reference!*/ coeffs,
+                            int numIterations) {
+    std::vector<T> zeroTimes;
     for (int iteration = 0; iteration < numIterations; iteration++) {
         int numCoeffs = coeffs.size();
         // Get the (updated) control polygon times
         auto cpTimes = controlPolygon(degree, knots);
-        std::vector<float> tempTimes;
+        std::vector<T> tempTimes;
         //std::cout << "*** Start of a new iteration\n";
         //std::cout << "Coeffs:\n";
         //for (int i = 0; i < numCoeffs; i++) {
@@ -412,14 +427,14 @@ std::vector<float> computeZeros(int degree,
             //std::cout << coeffs[i-1]*coeffs[i] << std::endl;
             if (coeffs[i-1]*coeffs[i] < 0.0) {
                 // Compute exactly where the zero-crossings occurs.
-                float t = (cpTimes[i-1]*coeffs[i]-cpTimes[i]*coeffs[i-1])/(coeffs[i]-coeffs[i-1]);
+                T t = (cpTimes[i-1]*coeffs[i]-cpTimes[i]*coeffs[i-1])/(coeffs[i]-coeffs[i-1]);
                 //std::cout << "zero at t=" << t << std::endl;
                 tempTimes.push_back(t);
             }
         }
         // Insert a new knot at every zero-crossing that was found.
-        for (float zeroCrossTime : tempTimes) {            
-            std::vector<float> knotsOut, coeffsOut;
+        for (T zeroCrossTime : tempTimes) {            
+            std::vector<T> knotsOut, coeffsOut;
             //std::cout << "inserting knot at " << zeroCrossTime << std::endl;
             bohmsMethod(degree, zeroCrossTime, knots, coeffs, knotsOut, coeffsOut);
             knots = knotsOut;
