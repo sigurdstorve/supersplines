@@ -276,7 +276,7 @@ def B_derivative(j, p, x, knots):
     """
     if p < 1: raise RuntimeError("p must be greater than or equal to 1")
     left = special_div(B(j, p-1, x, knots), (knots[j+p]-knots[j]) )
-    right = special_div(B(j+1,p-1, x, knots), (knots[j+p+1] - knots[j]) )
+    right = special_div(B(j+1,p-1, x, knots), (knots[j+p+1] - knots[j+1]) )
     return (left - right)*p
 
 def general_spline_interpolation(xs, ys, p, knots=None):
@@ -435,10 +435,39 @@ def test_alg_221_1():
             B2 = B(j+mu-p, p, t, knots)
             assert( float_is_zero(B2 - B1[j]) )
         
+
+def test_bspline_derivative():
+    """
+    Compare B-spline derivatives with numerical differentiation
+    of the B-splines.
+    """
+    import matplotlib.pyplot as plt
+    p = 2
+    knots = [0.0, 0.0, 0.0, 1.0, 1.4, 1.9, 2.1, 2.1, 2.1]
+    ts = np.linspace(knots[0], knots[-1]-0.001, 10000)
+    for j in range(0, len(knots)-p-1):
+        plt.figure(j)
+        xs = map(lambda x: B(j, p, x, knots), ts)
+        xs_der = map(lambda x: B_derivative(j, p, x, knots), ts)
+        plt.subplot(2,1,1)
+        plt.plot(ts, xs_der, label='Analytical')
+        
+        xs_num_der = np.diff(xs)/np.diff(ts)
+        plt.plot(ts[:-1], xs_num_der, label='Numerical')
+        plt.title('Basis function derivative %d' % j)
+        plt.subplot(2,1,2)
+        error = xs_der[:-1]-xs_num_der
+        plt.plot(error)
+        plt.title('Error')
+        
+    plt.show()
+        
+        
    
     
 if __name__ == '__main__':
-    test_get_mu_1()
-    test_alg_220_1()
-    test_alg_221_1()
-    test_render_tensor_product_surface_alg_221_1()
+    #test_get_mu_1()
+    #test_alg_220_1()
+    #test_alg_221_1()
+    #test_render_tensor_product_surface_alg_221_1()
+    test_bspline_derivative()
