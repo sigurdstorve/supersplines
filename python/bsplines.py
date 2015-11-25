@@ -276,7 +276,7 @@ def B_derivative(j, p, x, knots):
     """
     if p < 1: raise RuntimeError("p must be greater than or equal to 1")
     left = special_div(B(j, p-1, x, knots), (knots[j+p]-knots[j]) )
-    right = special_div(B(j+1,p-1, x, knots), (knots[j+p+1] - knots[j]) )
+    right = special_div(B(j+1,p-1, x, knots), (knots[j+p+1] - knots[j+1]) )
     return (left - right)*p
 
 def general_spline_interpolation(xs, ys, p, knots=None):
